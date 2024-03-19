@@ -29,6 +29,7 @@ if __name__=='__main__':
     lr = config['lr']
     lr_decay = config['lr_decay']
     weight_decay = config['weight_decay']
+    optimize_level = config['optimize_level']
     optimizer_type = config['optimizer_type']
     
 
@@ -64,7 +65,7 @@ if __name__=='__main__':
     elif device == 'xpu':
         model.to('xpu')
         loss_fn.to('xpu')
-        model, optimizer = ipex.optimize(model, optimizer=optimizer)
+        model, optimizer = ipex.optimize(model, optimizer=optimizer, level=optimize_level)
 
     if lr_decay == 'CosineAnnealingLR':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)

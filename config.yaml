@@ -1,9 +1,10 @@
 dataset_path: D:\Code\Datasets\ImageNet100\imagenet-100
 ckpt_path: D:/Code/CVModel/pretrained_weights/resnet50-0676ba61.pth
-device: cuda
+device: cpu
 num_class: 100
 batch_size: 16
 epochs: 4
+optimize_level: O0
 optimizer_type: Adam
 lr: 0.00001
 lr_decay: CosineAnnealingLR
