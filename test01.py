@@ -22,6 +22,7 @@ if __name__=='__main__':
     if device == 'xpu':
         import intel_extension_for_pytorch as ipex
     dataset_path = config['dataset_path']
+    ckpt_path = config['ckpt_path']
     num_class = config['num_class']
     batch_size = config['batch_size']
     epochs = config['epochs']
@@ -40,7 +41,7 @@ if __name__=='__main__':
 
     # Make Model
     model = torchvision.models.resnet50()
-    model.load_state_dict(torch.load("D:/Code/CVModel/pretrained_weights/resnet50-0676ba61.pth"))
+    model.load_state_dict(torch.load(ckpt_path))
 
     model.fc = nn.Linear(2048, num_class)
     for param in model.parameters():
