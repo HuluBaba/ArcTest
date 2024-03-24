@@ -63,6 +63,7 @@ if __name__=='__main__':
     weight_decay = config['weight_decay']
     optimize_level = config['optimize_level']
     optimizer_type = config['optimizer_type']
+    usetqdm = config['usetqdm']
     if config['warm']['warmup'] == True:
         warmup_epochs = config['warm']['warmup_epochs']
         warmup_multiple = config['warm']['warmup_multiple']
@@ -117,7 +118,14 @@ if __name__=='__main__':
         scheduler = GradualWarmupScheduler(optimizer, multiplier=warmup_multiple, total_epoch=warmup_epochs, after_scheduler=scheduler)
 
     loss = 10000.0
+
+        
+        
+
+
     with tqdm(total=epochs*len(train_loader),postfix=f"{loss:7.2f}",leave=True) as abar:
+        if not usetqdm:
+            abar.close()
         for epoch in range(1,epochs+1):
             for idx,(img,label) in enumerate(train_loader):
                 img = img.to(device)
@@ -128,9 +136,10 @@ if __name__=='__main__':
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                abar.update(1)
-                abar.set_postfix_str(f"{loss:7.2f}")
-                if (idx+1)%100==0:
+                if usetqdm:
+                    abar.update(1)
+                    abar.set_postfix_str(f"{loss:7.2f}")
+                if epoch==1 and (idx+1)%100==0:
                     model.eval()
                     right_num = 0
                     total_num = 0
@@ -142,8 +151,8 @@ if __name__=='__main__':
                             pred_label = torch.argmax(pred, dim=1)
                             right_num += torch.sum(pred_label==labels)
                             total_num += len(labels)
-                    print(f"right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
-                    print(f"{scheduler.get_lr()}")
+                    print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+                    # print(f"{optimizer.param_groups[0]['lr']}")
                     model.train()
             scheduler.step()
             # Valid
@@ -159,7 +168,8 @@ if __name__=='__main__':
                         pred_label = torch.argmax(pred, dim=1)
                         right_num += torch.sum(pred_label==labels)
                         total_num += len(labels)
-                print(f"right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+                print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+                print(f"{optimizer.param_groups[0]['lr']}")
                 model.train()
             # save pth
             if epoch%config['save_per_epoch'] == 0:
