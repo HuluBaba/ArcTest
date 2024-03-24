@@ -1,12 +1,16 @@
 dataset_path: D:\Code\Datasets\ImageNet100\imagenet-100
 ckpt_path: D:/Code/CVModel/pretrained_weights/resnet50-0676ba61.pth
-device: cpu
+device: cuda
 num_class: 100
 batch_size: 16
-epochs: 4
-optimize_level: O0
+epochs: 40
+warm: 
+  warmup: true
+  warmup_epochs: 1
+  warmup_multiple: 1000
+optimize_level: O1
 optimizer_type: Adam
-lr: 0.00001
+lr: 0.01
 lr_decay: CosineAnnealingLR
 weight_decay: 0.01
 valid_per_epoch: 1

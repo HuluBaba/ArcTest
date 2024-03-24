@@ -10,6 +10,38 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import yaml
 
+from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch
+
+class GradualWarmupScheduler(_LRScheduler):
+    def __init__(self, optimizer, multiplier, total_epoch, after_scheduler=None):
+        self.multiplier = multiplier
+        self.total_epoch = total_epoch
+        self.after_scheduler = after_scheduler
+        self.finished = False
+        super().__init__(optimizer)
+
+    def get_lr(self):
+        if self.last_epoch > self.total_epoch:
+            if self.after_scheduler:
+                if not self.finished:
+                    self.after_scheduler.base_lrs = [base_lr * self.multiplier for base_lr in self.base_lrs]
+                    self.finished = True
+                return self.after_scheduler.get_lr()
+            return [base_lr * self.multiplier for base_lr in self.base_lrs]
+
+        return [base_lr * ((self.multiplier - 1.) * self.last_epoch / self.total_epoch + 1.) for base_lr in self.base_lrs]
+
+    def step(self, epoch=None, metrics=None):
+        if self.finished and self.after_scheduler:
+            if epoch is None:
+                self.after_scheduler.step(None)
+            else:
+                self.after_scheduler.step(epoch - self.total_epoch)
+        else:
+            return super(GradualWarmupScheduler, self).step(epoch)
+
 
 
 
@@ -31,7 +63,14 @@ if __name__=='__main__':
     weight_decay = config['weight_decay']
     optimize_level = config['optimize_level']
     optimizer_type = config['optimizer_type']
-    
+    if config['warm']['warmup'] == True:
+        warmup_epochs = config['warm']['warmup_epochs']
+        warmup_multiple = config['warm']['warmup_multiple']
+        main_epochs = epochs - warmup_epochs
+        lr = lr / warmup_multiple
+    else:
+        warmup_epochs = 0
+        main_epochs = epochs
 
 
 
@@ -55,6 +94,7 @@ if __name__=='__main__':
     # Fine-tune
     loss_fn = nn.CrossEntropyLoss()
 
+
     if optimizer_type == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif optimizer_type == 'SGD':
@@ -67,8 +107,14 @@ if __name__=='__main__':
         loss_fn.to('xpu')
         model, optimizer = ipex.optimize(model, optimizer=optimizer, level=optimize_level)
 
-    if lr_decay == 'CosineAnnealingLR':
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+
+
+
+    if lr_decay == 'CosineAnnealingLR' :
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=main_epochs)
+    
+    if warmup_epochs > 0:
+        scheduler = GradualWarmupScheduler(optimizer, multiplier=warmup_multiple, total_epoch=warmup_epochs, after_scheduler=scheduler)
 
     loss = 10000.0
     with tqdm(total=epochs*len(train_loader),postfix=f"{loss:7.2f}",leave=True) as abar:
@@ -97,6 +143,7 @@ if __name__=='__main__':
                             right_num += torch.sum(pred_label==labels)
                             total_num += len(labels)
                     print(f"right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+                    print(f"{scheduler.get_lr()}")
                     model.train()
             scheduler.step()
             # Valid
