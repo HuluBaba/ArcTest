@@ -123,40 +123,25 @@ if __name__=='__main__':
         
 
 
-    with tqdm(total=epochs*len(train_loader),postfix=f"{loss:7.2f}",leave=True) as abar:
-        if not usetqdm:
-            abar.close()
-        for epoch in range(1,epochs+1):
-            for idx,(img,label) in enumerate(train_loader):
-                img = img.to(device)
-                pred = model(img)
-                label = label.to(device)
-                label_onehot = F.one_hot(label, num_class).float()
-                loss = loss_fn(pred, label)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                if usetqdm:
-                    abar.update(1)
-                    abar.set_postfix_str(f"{loss:7.2f}")
-                if epoch==1 and (idx+1)%100==0:
-                    model.eval()
-                    right_num = 0
-                    total_num = 0
-                    with torch.no_grad():
-                        for imgs, labels in test_loader:
-                            imgs = imgs.to(device)
-                            labels = labels.to(device)
-                            pred = model(imgs)
-                            pred_label = torch.argmax(pred, dim=1)
-                            right_num += torch.sum(pred_label==labels)
-                            total_num += len(labels)
-                    print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
-                    # print(f"{optimizer.param_groups[0]['lr']}")
-                    model.train()
-            scheduler.step()
-            # Valid
-            if epoch%config['valid_per_epoch'] == 0:
+    if usetqdm:
+        abar = tqdm(total=epochs*len(train_loader),postfix=f"{loss:7.2f}",leave=True)
+
+    for epoch in range(1,epochs+1):
+        for idx,(img,label) in enumerate(train_loader):
+            img = img.to(device)
+            pred = model(img)
+            label = label.to(device)
+            label_onehot = F.one_hot(label, num_class).float()
+            loss = loss_fn(pred, label)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            if usetqdm:
+                abar.update(1)
+                abar.set_postfix_str(f"{loss:7.2f}")
+            if (idx+1)%100==0:
+                scheduler.step()
+            if epoch==1 and (idx+1)%200==0:
                 model.eval()
                 right_num = 0
                 total_num = 0
@@ -171,10 +156,29 @@ if __name__=='__main__':
                 print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
                 print(f"{optimizer.param_groups[0]['lr']}")
                 model.train()
-            # save pth
-            if epoch%config['save_per_epoch'] == 0:
-                torch.save(model.state_dict(), f"./model_epoch{epoch}.pth")  
-                torch.save(optimizer.state_dict(), f"./optimizer_epoch{epoch}.pth")
+        scheduler.step()
+        # Valid
+        if epoch%config['valid_per_epoch'] == 0:
+            model.eval()
+            right_num = 0
+            total_num = 0
+            with torch.no_grad():
+                for imgs, labels in test_loader:
+                    imgs = imgs.to(device)
+                    labels = labels.to(device)
+                    pred = model(imgs)
+                    pred_label = torch.argmax(pred, dim=1)
+                    right_num += torch.sum(pred_label==labels)
+                    total_num += len(labels)
+            print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+            print(f"{optimizer.param_groups[0]['lr']}")
+            model.train()
+        # save pth
+        if epoch%config['save_per_epoch'] == 0:
+            torch.save(model.state_dict(), f"./model_epoch{epoch}.pth")  
+            torch.save(optimizer.state_dict(), f"./optimizer_epoch{epoch}.pth")
+    if usetqdm:
+        abar.close()
 
             
             
