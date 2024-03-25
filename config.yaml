@@ -4,12 +4,13 @@ device: cuda
 num_class: 100
 batch_size: 16
 epochs: 40
-usetqdm: false
+usetqdm: true
+need_valid: false
 warm: 
   warmup: true
   warmup_epochs: 10
   warmup_multiple: 10
-optimize_level: O1
+optimize_level: O0
 optimizer_type: SGD
 lr: 0.01
 lr_decay: CosineAnnealingLR

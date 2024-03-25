@@ -64,6 +64,7 @@ if __name__=='__main__':
     optimize_level = config['optimize_level']
     optimizer_type = config['optimizer_type']
     usetqdm = config['usetqdm']
+    need_valid = config['need_valid']
     if config['warm']['warmup'] == True:
         warmup_epochs = config['warm']['warmup_epochs']
         warmup_multiple = config['warm']['warmup_multiple']
@@ -142,23 +143,24 @@ if __name__=='__main__':
             if (idx+1)%100==0:
                 scheduler.step()
             if epoch==1 and (idx+1)%200==0:
-                model.eval()
-                right_num = 0
-                total_num = 0
-                with torch.no_grad():
-                    for imgs, labels in test_loader:
-                        imgs = imgs.to(device)
-                        labels = labels.to(device)
-                        pred = model(imgs)
-                        pred_label = torch.argmax(pred, dim=1)
-                        right_num += torch.sum(pred_label==labels)
-                        total_num += len(labels)
-                print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
-                print(f"{optimizer.param_groups[0]['lr']}")
-                model.train()
+                # model.eval()
+                # right_num = 0
+                # total_num = 0
+                # with torch.no_grad():
+                #     for imgs, labels in test_loader:
+                #         imgs = imgs.to(device)
+                #         labels = labels.to(device)
+                #         pred = model(imgs)
+                #         pred_label = torch.argmax(pred, dim=1)
+                #         right_num += torch.sum(pred_label==labels)
+                #         total_num += len(labels)
+                # print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
+                # print(f"{optimizer.param_groups[0]['lr']}")
+                # model.train()
+                print(f"epoch:{epoch}, idx:{idx+1}, loss:{loss}")
         scheduler.step()
         # Valid
-        if epoch%config['valid_per_epoch'] == 0:
+        if need_valid and epoch%config['valid_per_epoch'] == 0:
             model.eval()
             right_num = 0
             total_num = 0
@@ -173,6 +175,8 @@ if __name__=='__main__':
             print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
             print(f"{optimizer.param_groups[0]['lr']}")
             model.train()
+        if not need_valid:
+            print(f"epoch:{epoch}, loss:{loss}")
         # save pth
         if epoch%config['save_per_epoch'] == 0:
             torch.save(model.state_dict(), f"./model_epoch{epoch}.pth")  
