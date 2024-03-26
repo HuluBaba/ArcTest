@@ -196,8 +196,8 @@ if __name__=='__main__':
     torch.no_grad()
     with tqdm(total=len(test_loader)) as pbar:
         for img,label in test_loader:
-            img = img.to('cuda')
-            label = label.to('cuda')
+            img = img.to(device)
+            label = label.to(device)
             pred = model(img)
             pred_label = torch.argmax(pred, dim=1)
             right_num += torch.sum(pred_label==label)

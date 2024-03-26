@@ -1,8 +1,8 @@
 dataset_path: D:\Code\Datasets\ImageNet100\imagenet-100
-ckpt_path: D:/Code/CVModel/pretrained_weights/resnet50-0676ba61.pth
+ckpt_path: ~
 device: cuda
 num_class: 100
-batch_size: 16
+batch_size: 64
 epochs: 40
 usetqdm: true
 need_valid: false
@@ -12,6 +12,7 @@ warm:
   warmup_multiple: 10
 optimize_level: O0
 optimizer_type: SGD
+optimizer_save_path: ~
 lr: 0.01
 lr_decay: CosineAnnealingLR
 weight_decay: 0.01
