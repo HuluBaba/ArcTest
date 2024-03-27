@@ -65,6 +65,7 @@ if __name__=='__main__':
     optimizer_type = config['optimizer_type']
     usetqdm = config['usetqdm']
     need_valid = config['need_valid']
+    num_workers = config['num_workers']
     if config['warm']['warmup'] == True:
         warmup_epochs = config['warm']['warmup_epochs']
         warmup_multiple = config['warm']['warmup_multiple']
@@ -78,18 +79,19 @@ if __name__=='__main__':
 
     # Data load
     train_dataset, test_dataset, label_names = mydatasets.load_imagenet100_data(dataset_path)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # Make Model
     model = torchvision.models.resnet50()
-    model.load_state_dict(torch.load(ckpt_path))
+    if ckpt_path is not None:
+        model.load_state_dict(torch.load(ckpt_path))
 
     model.fc = nn.Linear(2048, num_class)
-    for param in model.parameters():
-        param.requires_grad = True
-    for param in model.fc.parameters():
-        param.requires_grad = True
+    # for param in model.parameters():
+    #     param.requires_grad = True
+    # for param in model.fc.parameters():
+    #     param.requires_grad = True
 
 
 
@@ -134,29 +136,13 @@ if __name__=='__main__':
             label = label.to(device)
             label_onehot = F.one_hot(label, num_class).float()
             loss = loss_fn(pred, label)
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
-            if usetqdm:
-                abar.update(1)
+            if usetqdm and (idx+1)%100==0:
+                abar.update(100)
                 abar.set_postfix_str(f"{loss:7.2f}")
-            if (idx+1)%100==0:
-                scheduler.step()
             if epoch==1 and (idx+1)%200==0:
-                # model.eval()
-                # right_num = 0
-                # total_num = 0
-                # with torch.no_grad():
-                #     for imgs, labels in test_loader:
-                #         imgs = imgs.to(device)
-                #         labels = labels.to(device)
-                #         pred = model(imgs)
-                #         pred_label = torch.argmax(pred, dim=1)
-                #         right_num += torch.sum(pred_label==labels)
-                #         total_num += len(labels)
-                # print(f"epoch:{epoch}, right_num:{right_num}, total_num:{total_num}, acc:{right_num/total_num}")
-                # print(f"{optimizer.param_groups[0]['lr']}")
-                # model.train()
                 print(f"epoch:{epoch}, idx:{idx+1}, loss:{loss}")
         scheduler.step()
         # Valid
@@ -184,15 +170,11 @@ if __name__=='__main__':
     if usetqdm:
         abar.close()
 
-            
-            
 
-
-
-
-
+    # Final Test
     right_num = 0
     total_num = 0
+    model.eval()
     torch.no_grad()
     with tqdm(total=len(test_loader)) as pbar:
         for img,label in test_loader:

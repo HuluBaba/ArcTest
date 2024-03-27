@@ -1,8 +1,9 @@
 dataset_path: D:\Code\Datasets\ImageNet100\imagenet-100
-ckpt_path: ~
+ckpt_path: D:/Code/CVModel/pretrained_weights/resnet50-0676ba61.pth
 device: cuda
 num_class: 100
-batch_size: 64
+batch_size: 8
+num_workers: 8
 epochs: 40
 usetqdm: true
 need_valid: false
